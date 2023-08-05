@@ -151,8 +151,7 @@ class ListView:
 
     def startpos_up(self):
         self.startpos -= (self.pagesize - 1)
-        if self.startpos < 0:
-            self.startpos = 0
+        self.startpos = max(self.startpos, 0)
         self.redraw()
 
     def handle_key_press(self, code, rawcode):
@@ -177,15 +176,13 @@ class ListView:
         elif code == hme.KEY_CHANNELDOWN and self.pos < maxpos:
             self.sound('pagedown')
             self.pos += (self.pagesize - 1)
-            if self.pos > maxpos:
-                self.pos = maxpos
+            self.pos = min(self.pos, maxpos)
             self.startpos_down()
             self.pos_update()
         elif code == hme.KEY_CHANNELUP and self.pos > 0:
             self.sound('pageup')
             self.pos -= (self.pagesize - 1)
-            if self.pos < 0:
-                self.pos = 0
+            self.pos = max(self.pos, 0)
             self.startpos_up()
             self.pos_update()
         elif code == hme.KEY_ADVANCE:

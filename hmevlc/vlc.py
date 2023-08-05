@@ -55,12 +55,12 @@ def have(config):
     global vlcpath, VBITRATE, ABITRATE, SERVER
     if config.has_section('hmevlc'):
         for opt, value in config.items('hmevlc'):
-            if opt == 'vlc':
-                vlcpath = value
+            if opt == 'abitrate':
+                ABITRATE = int(value)
             elif opt == 'vbitrate':
                 VBITRATE = int(value)
-            elif opt == 'abitrate':
-                ABITRATE = int(value)
+            elif opt == 'vlc':
+                vlcpath = value
             elif opt == 'vlcport':
                 SERVER = int(value)
     return os.path.isfile(vlcpath)

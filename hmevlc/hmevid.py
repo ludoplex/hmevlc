@@ -90,10 +90,11 @@ class VideoStreamer:
             h = self.root.height - 2 * hme.SAFE_TITLE_V
             self.loadwin = self.root.child(hme.SAFE_TITLE_H, hme.SAFE_TITLE_V,
                                            w, h)
-            loadtext = self.loadwin.child(text='Loading %s...' %
-                                          self.item['title'], height=(h / 2),
-                                          flags=(hme.RSRC_TEXT_WRAP |
-                                                 hme.RSRC_VALIGN_BOTTOM))
+            loadtext = self.loadwin.child(
+                text=f"Loading {self.item['title']}...",
+                height=(h / 2),
+                flags=(hme.RSRC_TEXT_WRAP | hme.RSRC_VALIGN_BOTTOM),
+            )
             self.root.set_color(BG)
             self.app.wfile.flush()
             if self.item['needs_vlc']:
@@ -136,10 +137,7 @@ class VideoStreamer:
     def status_update(self):
         if not self.progbar:
             return
-        if self.duration:
-            width = self.position * self.bwidth / self.duration
-        else:
-            width = 0
+        width = self.position * self.bwidth / self.duration if self.duration else 0
         if 0 <= self.stream.speed < 1:
             self.status.set_color(FG)
         else:
@@ -196,8 +194,7 @@ class VideoStreamer:
         self.info_update()
 
     def speed_sound(self, newspeed):
-        if abs(newspeed) >= 1 and not (newspeed == 1 and 
-                                       self.stream.speed == 0):
+        if abs(newspeed) >= 1 and (newspeed != 1 or self.stream.speed != 0):
             i = SPEEDS.index(newspeed)
             self.sound(SOUNDS[i])
 
@@ -213,31 +210,32 @@ class VideoStreamer:
         self.app.set_focus(self.app)
 
     def handle_resource_info(self, resource, status, info):
-        if self.stream and resource == self.stream.id:
-            if (status >= hme.RSRC_STATUS_ERROR or
-                status == hme.RSRC_STATUS_CLOSED):
-                if self.loadwin:
-                    self.retry_or_quit()
-                    return
-                if self.stream.speed:
-                    self.sound('alert')
-                self.change_speed(0)
-            elif self.loadwin and status == hme.RSRC_STATUS_READY:
-                self.loadwin_remove()
-                self.loadbar = None
-                self.root.set_resource(self.stream)
-                self.status_bar()
-                self.info_bar()
-                self.update_and_clear(1)
-            self.duration = int(info['duration'])
-            self.position = int(info['position'])
-            newspeed = float(info['speed'])
-            if newspeed and newspeed != self.stream.speed:
-                self.speed_sound(newspeed)
-                self.stream.speed = newspeed
-            if (status >= hme.RSRC_STATUS_PLAYING and 
-                self.progbar and self.progbar.visible):
-                self.status_update()
+        if not self.stream or resource != self.stream.id:
+            return
+        if (status >= hme.RSRC_STATUS_ERROR or
+            status == hme.RSRC_STATUS_CLOSED):
+            if self.loadwin:
+                self.retry_or_quit()
+                return
+            if self.stream.speed:
+                self.sound('alert')
+            self.change_speed(0)
+        elif self.loadwin and status == hme.RSRC_STATUS_READY:
+            self.loadwin_remove()
+            self.loadbar = None
+            self.root.set_resource(self.stream)
+            self.status_bar()
+            self.info_bar()
+            self.update_and_clear(1)
+        self.duration = int(info['duration'])
+        self.position = int(info['position'])
+        newspeed = float(info['speed'])
+        if newspeed and newspeed != self.stream.speed:
+            self.speed_sound(newspeed)
+            self.stream.speed = newspeed
+        if (status >= hme.RSRC_STATUS_PLAYING and 
+            self.progbar and self.progbar.visible):
+            self.status_update()
 
     def update_and_clear(self, speed):
         if speed == 1:
@@ -274,10 +272,7 @@ class VideoStreamer:
 
     def loadbar_anim(self):
         if self.loadbar:
-            if self.loadbar.xpos == 1:
-                newx = self.lwidth - self.lheight - 3
-            else:
-                newx = 1
+            newx = self.lwidth - self.lheight - 3 if self.loadbar.xpos == 1 else 1
             self.loadbar.set_bounds(xpos=newx, animtime=1)
             self.send_key(hme.KEY_TIVO, 0, animtime=1)
 

@@ -50,22 +50,17 @@ TAGS = re.compile(r'<.*?>')
 BOM = '\xef\xbb\xbf'
 
 def untag(text):
-    if text:
-        return TAGS.sub('', text).strip()
-    else:
-        return ''
+    return TAGS.sub('', text).strip() if text else ''
 
 def pytivo_metadata(full_path):
     metadata = {}
     path, name = os.path.split(full_path)
-    for metafile in [os.path.join(path, 'default.txt'), full_path + '.txt',
-                     os.path.join(path, '.meta', 'default.txt'),
-                     os.path.join(path, '.meta', name) + '.txt']:
+    for metafile in [os.path.join(path, 'default.txt'), f'{full_path}.txt', os.path.join(path, '.meta', 'default.txt'), os.path.join(path, '.meta', name) + '.txt']:
         if os.path.exists(metafile):
             for line in file(metafile, 'U'):
                 if line.startswith(BOM):
                     line = line[3:]
-                if line.strip().startswith('#') or not ':' in line:
+                if line.strip().startswith('#') or ':' not in line:
                     continue
                 key, value = [x.strip() for x in line.split(':', 1)]
                 if not key or not value:
@@ -96,10 +91,7 @@ class Hmevlc(hme.Application):
     def handle_resolution(self):
         hd = (1280, 720, 1, 1)
         self.hd = hd in self.resolutions
-        if self.hd:
-            return hd
-        else:
-            return (640, 480, 1, 1)
+        return hd if self.hd else (640, 480, 1, 1)
 
     def handle_active(self):
         config = self.context.server.config
@@ -130,12 +122,12 @@ class Hmevlc(hme.Application):
                 needs_vlc = False
             if self.have_vlc or not needs_vlc:
                 item = {'title': title}
-                item.update(config.items(title))
+                item |= config.items(title)
                 item['needs_vlc'] = needs_vlc
                 if 'dir' in item:
                     if os.path.isdir(item['dir']):
                         item['func'] = self.new_menu_files
-                        if not 'icon' in item:
+                        if 'icon' not in item:
                             item['icon'] = folder
                         dir_list.append(item)
                     else:
@@ -205,29 +197,31 @@ class Hmevlc(hme.Application):
             item = {'title': i, 'needs_vlc': needs_vlc}
             newpath = os.path.join(path, i)
             if os.path.isdir(newpath):
-                item.update({'icon': self.graphics[3], 'dir': newpath,
-                             'func': self.new_menu_files})
+                item |= {
+                    'icon': self.graphics[3],
+                    'dir': newpath,
+                    'func': self.new_menu_files,
+                }
                 dirs.append(item)
             else:
                 ext = os.path.splitext(i)[1].lower()
                 if ext in self.exts:
                     if ext not in self.pass_exts:
                         item['needs_vlc'] = True
-                    item.update({'url': newpath, 'func': self.play_file})
+                    item |= {'url': newpath, 'func': self.play_file}
                     files.append(item)
         self.push_menu(share['title'], dirs + files, GREEN, path)
 
     def play_file(self, s):
         item = {}
-        item.update(s)
+        item |= s
         url = s['url']
         metadata = pytivo_metadata(url)
         if 'description' in metadata and metadata['description']:
             item['desc'] = metadata['description']
         if not s['needs_vlc']:
             url = url.replace(self.context.server.datapath, '', 1)
-            url = 'http://%s/%s' % (self.context.headers['host'],
-                                    urllib.quote(url.encode('utf-8')))
+            url = f"http://{self.context.headers['host']}/{urllib.quote(url.encode('utf-8'))}"
             item['url'] = url
         self.play_stream(item)
 
@@ -308,8 +302,7 @@ class Hmevlc(hme.Application):
     def handle_focus(self, focus):
         if focus:
             if self.in_list:
-                s = self.menus[-1].selected
-                if s:
+                if s := self.menus[-1].selected:
                     s['func'](s)
                 else:
                     self.pop_menu()
